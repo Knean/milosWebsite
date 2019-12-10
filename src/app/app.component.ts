@@ -40,23 +40,39 @@ export class AppComponent implements OnInit {
     const nodes = graph.selectAll('.node')
       .data(treeData.descendants())
 
-    var enterNodes = nodes.enter()
-    .append('rect')
-    .attr('fill', 'red')
-    .attr('stroke','black')
-    .attr('width', 100)
-    .attr('height',100)
-    .attr('transform',(d,i,n)=>{
+ 
+
+
+
+
+    var links = graph.selectAll('.link').data(rootNode.links())
+    links.enter().append('path')
+    .attr('stroke','blue')
+    .attr('d', d3.linkVertical()
+    .x(function(d) { return d.x; })
+    .y(function(d) { return d.y; }))
+    .attr('class', 'link')
+    .attr('fill', 'none')
+    .attr('stroke', '#aaa') 
+    .attr('stroke-width', 2)
+    var enterNodes = nodes.enter().append('g').attr('transform',(d,i,n)=>{
       let x = d.x
       let y = d.y
       return `translate(${x},${y})`
     })
+    enterNodes.append('rect')
+    .attr('fill', 'red')
+    .attr('stroke','black')
+    .attr('width', 100)
+    .attr('height',100)
+    .attr('transform', d => `translate(${-50}, ${-50})`).raise();
+    
 
-
+    enterNodes.append('text')
+    .text((d)=>{return d.data.name})
+    .attr('fill',"black")
+    .attr('transform', d => `translate(${10}, ${20})`);
   }
-}
-
-var draw = function () {
 
 }
-draw();
+
