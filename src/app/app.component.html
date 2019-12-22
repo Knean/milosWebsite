@@ -12,10 +12,11 @@
 
 <div style ="width : 30vw; float:left">
  
-    <label for ="transactionOwner"> purchase made by </label>
+    <label for ="transactionOwner"> Name of the user </label>
     <input id = "transactionOwner" type = "text" style="width: 100%; padding: 50px; " [formControl] = "name">
+    <label for = "ammount"> number of slots bought</label>
     <input id = "ammount" type = "number" style = "width: 100%" [formControl] = "ammount">
-    <button (click)= "makeTransaction($event)"> add </button>
+    <button (click)= "makeTransaction($event)"> buy </button>
   
 </div>
 
