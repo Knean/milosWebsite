@@ -172,8 +172,6 @@ console.log(virtualData)
       if (!dataNode.hasOwnProperty("owner")) {
         this.data[dataIndex].owner = name;
         ammount -= 1;
-
-
       }
       index += 1;
     }
@@ -202,12 +200,21 @@ console.log(virtualData)
     this.graph.selectAll('.link').remove();
 
 
-    // stratify the data
+   
 
     this.data.sort((a, b) => {
       return a.id - b.id
     })
     console.log(this.data, "data before stratify")
+    let children = [25,...this.findAllChildren(25),26]
+    console.log(children, "children")
+   
+    let strippedData = [...this.data].filter((element)=>children.findIndex((child)=>child==element.id)>0?true:false)
+    console.log(this.data,"data before stripping")
+    strippedData[0].parent=""
+    //console.log(strippedData.filter((element)=>element.id>5?-10:1), "stripped data")
+    console.log(strippedData, "stripped data")
+     // stratify the data
     this.rootNode = d3.stratify()
 
 
@@ -217,7 +224,7 @@ console.log(virtualData)
       .parentId(function (d) {
         return d.parent.id;
       })
-      (this.data).sort((a, b) => a.id % 2 == 1 ? a.id - b.id : b.id - a.id)
+      (strippedData).sort((a, b) => a.id % 2 == 1 ? a.id - b.id : b.id - a.id)
     console.log(this.rootNode.descendants(), 'stratified data')
     //stratified data -> tree form data
     var treeData = d3.tree().size([1400, 800])(this.rootNode)
@@ -255,7 +262,7 @@ console.log(virtualData)
       .attr('height', 30)
       .attr('transform', d => `translate(${-5}, ${-10})`).raise();
     // add a click event on each rectangle
-    rectangles.on("click", (d) => {
+    enterNodes.on("click", (d) => {
       console.log(d)
       this.selected = d.data.name;
     })
