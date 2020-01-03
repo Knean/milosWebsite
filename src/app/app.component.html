@@ -17,7 +17,18 @@
     <label for = "ammount"> number of slots bought</label>
     <input id = "ammount" type = "number" style = "width: 100%" [formControl] = "ammount">
     <button (click)= "makeTransaction($event)"> buy </button>
-  
+    <div (click) = "resetView()" style = "margin: 10px;">
+      <button>Back</button>
+    </div>
+    <div>
+      <label>
+        display whole tree
+        <input  [formControl] = "wholeTree" type = "checkbox">
+      </label>
+      
+    </div>
+    
+ 
 </div>
 
 <router-outlet></router-outlet>
