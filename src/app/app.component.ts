@@ -3,6 +3,7 @@ import { markParentViewsForCheck } from '@angular/core/src/view/util';
 import { FormControl } from '@angular/forms';
 import { analyzeAndValidateNgModules } from '@angular/compiler';
 import { element } from '@angular/core/src/render3';
+import { JsonPipe } from '@angular/common';
 declare const d3;
 //declare const fisheye;
 declare var graph;
@@ -53,7 +54,8 @@ export class AppComponent implements OnInit {
         this.data[parentIndex].children.length > 0 ? node.position = "top" : node.position = "bottom"
 
         this.data.push(node)
-        this.data[parentIndex].children.push(newItemId)
+        this.data[parentIndex].children.push(this.data[newItemId-1])
+   
       }
       else {
         let parentNumber = Math.round(newItemId / 2) % 2 != 0 ? Math.round(newItemId / 2) : Math.round(newItemId / 2) - 1
@@ -64,7 +66,7 @@ export class AppComponent implements OnInit {
         this.data[parentIndex].children.length > 0 ? node.position = "bottom" : node.position = "top"
 
         this.data.push(node)
-        this.data[parentIndex].children.push(newItemId)
+        this.data[parentIndex].children.push(this.data[newItemId-1])
       }
     }
   }
@@ -76,7 +78,7 @@ export class AppComponent implements OnInit {
       items.forEach((item) => {
         indexlist.push(
           mario.data.findIndex((node) => {
-            return node.id == item
+            return node.id == item.id
           }))
       })
       return indexlist
@@ -108,22 +110,26 @@ export class AppComponent implements OnInit {
   findAllAncestors(index) {
     var ancestorsList = []
     var item = this.data[index].parent
-    //console.log(item, "this is the item")
+ 
     while (typeof item != "undefined") {
-      console.log(typeof item)
+  
       ancestorsList.push(item)
-      //console.log("operating")
+   
       try {
         item = this.data.find((node) => node.id == item.parent.id)
       }
       catch{
-        console.log(item, "this has no parent")
+       
         item = undefined;
       }
 
     }
-    ancestorsList.forEach((ancestor) => ancestor.childrenSold += 1)
-    console.log(ancestorsList, this.data[index])
+   
+     ancestorsList = ancestorsList.filter((item)=> item != '')
+    console.log(ancestorsList, "ancestors list")
+    ancestorsList.forEach((ancestor) => ancestor.childrenSold += 1 )
+    
+    
   }
   //findAllAncestors(index){}
 
@@ -144,7 +150,7 @@ export class AppComponent implements OnInit {
           bigger = 1;
           break;
       }
-      console.log(two, three, bigger, "i dont fuckig know")
+    
       // this.data.2.children
       //this.data.3.children
       let index = 0
@@ -156,7 +162,7 @@ export class AppComponent implements OnInit {
           && currentNode.id % 2 != bigger) {
           this.data[index].owner = this.name.value;
           this.users[userIndex].nodes.push(currentNode.id)
-
+          this.findAllAncestors(index)
           return
 
         }
@@ -166,9 +172,6 @@ export class AppComponent implements OnInit {
     }
     let outerThis = this
     this.data.sort((a, b) => a.id - b.id)
-
-
-
     let ammount = this.ammount.value
     //make this multipurpose!!!!
     function createIndexedNodes() {
@@ -191,17 +194,22 @@ export class AppComponent implements OnInit {
         // fix this with a try catch block
 
         assignFreeNode.call(this, userIndex)
+        
         ammount--
       }
       /////////////////////////expand table
       let nodeIndex = this.data.findIndex(
+
         // decide the node to pay out
         //instead of zero, the highest < 63 children sold node
+        //sort data by highest children sold
         (element) => element.id == this.users[userIndex].nodes[0]
       )
+      
       //nodeIndex = 11
 
       let freeChildren: any = this.findAllChildren(nodeIndex)
+  
 
       // make it so that start node has  62 kids
       while (freeChildren.length < ammount) {
@@ -209,16 +217,19 @@ export class AppComponent implements OnInit {
         this.addDataRow()
 
         freeChildren = this.findAllChildren(nodeIndex)
+
       }
       //deep copy of the data
-      let virtualData = JSON.parse(JSON.stringify(this.data))
+      let virtualData = [...this.data].sort((a,b)=>a.id - b.id)
+      console.log(virtualData, "children bought");
       // asign one to the first node the user owns
       virtualData[nodeIndex].virtualId = 1
 
       // asign virtual indexes to virtual data
       for (let index = 0; index < freeChildren.length; index++) {
         var parent: any
-        let originalElement = virtualData[index + 1]
+        let originalElement = virtualData[index +1]
+        console.log(originalElement, "original element");
         if (index > 1) {
           //same parent as original node
           parent = virtualData.find((parent) => {
@@ -228,7 +239,7 @@ export class AppComponent implements OnInit {
         } else {
           parent = virtualData[nodeIndex]
         }
-
+console.log(parent, "parent")
         let childElementIndex = virtualData.findIndex((item) => {
           return item.parent.id == parent.id
             //same position as original node
@@ -240,7 +251,7 @@ export class AppComponent implements OnInit {
       }
 
       // get indexed children to work with
-      let indexedNodes = virtualData.filter((element) => element.hasOwnProperty("virtualId"))
+      let indexedNodes = virtualData.filter((element) => element.hasOwnProperty("virtualId") && element.virtualId != null)
         .sort((a, b) => a.virtualId - b.virtualId)
       return indexedNodes
     }
@@ -248,7 +259,7 @@ export class AppComponent implements OnInit {
       return !node.hasOwnProperty("owner")
     })
     while (indexedNodes.length < this.ammount.value) {
-      console.log("this part is fucky")
+   
       this.addDataRow()
       indexedNodes = createIndexedNodes.call(this).filter((node) => {
         return !node.hasOwnProperty("owner")
@@ -272,17 +283,20 @@ export class AppComponent implements OnInit {
         ammount -= 1;
 
         this.findAllAncestors(dataIndex)
-        console.log(this.data)
+ 
       }
       index += 1;
     }
     // if ammount still not zero, add a row and repeat the process
+    console.log(this.data[0].childrenSold, "data after purchase")
     this.update()
+    this.data.forEach((item)=>item.virtualId = null)
   }
   update() {
-    console.log("we've made it to update()")
+    
     var scale = d3.scaleOrdinal(d3["schemeSet3"])
       .domain(this.users.map((element) => element.name))
+console.log(this.users)
 
     this.graph.selectAll('.node').remove();
     this.graph.selectAll('.link').remove();
@@ -291,12 +305,16 @@ export class AppComponent implements OnInit {
       return a.id - b.id
     })
     // could be skipped if selected = 0
-    let children = ["skipped", this.data[this.selected].id, ...this.findAllChildren(this.selected)]
+    let children = ["skipped", this.data[this.selected], ...this.findAllChildren(this.selected)]
 
     //create a deep copy of the data array
-    let strippedData = JSON.parse(JSON.stringify(this.data))
-      .filter((element) => children.findIndex((child) => child == element.id) > 0 ? true : false)
-    //splice the array so we get the same size tree
+    
+    let strippedData = [...this.data]
+    //wtf does this do?????
+     .filter((element) => children.findIndex((child) => child.id == element.id) > 0 ? true : false)
+    
+     //splice the array so we get the same size tree
+   
     strippedData.sort((a, b) => {
       return a.id - b.id
     })
@@ -305,7 +323,11 @@ export class AppComponent implements OnInit {
       strippedData.splice(63)
     }
     // first item cant have a parent
-    strippedData[0].parent = ""
+    //dodge passing by reference value and messing up main data
+    strippedData[0] = { owner: strippedData[0].owner , id: strippedData[0].id, parent: "", children:strippedData[0].children, childrenSold: strippedData[0].childrenSold },
+     
+    //strippedData[0].parent = null;
+     
 
     // stratify the data
     this.rootNode = d3.stratify()
@@ -322,6 +344,7 @@ export class AppComponent implements OnInit {
     //create the selection of nodes from the tree data descendants
     this.nodes = this.graph.selectAll('.node')
       .data(treeData.descendants())
+      console.log(treeData.descendants());
     // save the links data from the stratified data
     var links = this.graph.selectAll('.link').data(this.rootNode.links())
 
@@ -348,7 +371,7 @@ export class AppComponent implements OnInit {
 
     // draw rectangles in each node group
     var rectangles = enterNodes.append('rect')
-      .attr('fill', d => d.data.hasOwnProperty('owner') ? scale(d.data.owner) : 'gray')
+      .attr('fill', d =>  d.data.owner != null  ? scale(d.data.owner) : 'gray')
       .attr('stroke', 'black')
       .attr('width', 30)//30
       .attr('height', 30)
@@ -405,9 +428,15 @@ export class AppComponent implements OnInit {
   // 
 
   ngOnInit() {
-    this.data.push({ id: 1, parent: "", children: [2, 3], childrenSold: 0 })
-    this.data.push({ id: 2, position: "top", childrenSold: 0, parent: this.data[0], children: [] })
-    this.data.push({ id: 3, position: "bottom", childrenSold: 0, parent: this.data[0], children: [] })
+    this.data = [
+      { id: 1, parent: "", children: [], childrenSold: 0 },
+      { id: 2, position: "top", childrenSold: 0, parent: null, children: [] },
+      { id: 3, position: "bottom", childrenSold: 0, parent: null, children: [] }]
+    this.data[0].children = [this.data[1],this.data[2]]
+    
+    this.data[2].parent = this.data[0]
+    this.data[1].parent = this.data[0]
+
     this.addDataRow()
     this.addDataRow()
     this.addDataRow()
@@ -416,7 +445,7 @@ export class AppComponent implements OnInit {
 
 
 
-    console.log(this.data)
+
     let mario = this
 
     //define dimensions
