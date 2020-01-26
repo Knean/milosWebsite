@@ -49,7 +49,7 @@ export class AppComponent implements OnInit {
         let parentIndex = this.data.findIndex((element) => element.id == parentNumber)
         let parent = this.data.find((element) => element.id == parentNumber)
 
-        let node = { id: newItemId, parent: parent, children: [], position: null }
+        let node = { id: newItemId, parent: parent, children: [], position: null, childrenSold: 0 }
         this.data[parentIndex].children.length > 0 ? node.position = "top" : node.position = "bottom"
 
         this.data.push(node)
@@ -60,7 +60,7 @@ export class AppComponent implements OnInit {
         let parentIndex = this.data.findIndex((element) => element.id == parentNumber)
         let parent = this.data.find((element) => element.id == parentNumber)
 
-        let node = { id: newItemId, parent: parent, children: [], position: null }
+        let node = { id: newItemId, parent: parent, children: [], position: null, childrenSold: 0 }
         this.data[parentIndex].children.length > 0 ? node.position = "bottom" : node.position = "top"
 
         this.data.push(node)
@@ -105,6 +105,28 @@ export class AppComponent implements OnInit {
 
   }
 
+  findAllAncestors(index) {
+    var ancestorsList = []
+    var item = this.data[index].parent
+    //console.log(item, "this is the item")
+    while (typeof item != "undefined") {
+      console.log(typeof item)
+      ancestorsList.push(item)
+      //console.log("operating")
+      try {
+        item = this.data.find((node) => node.id == item.parent.id)
+      }
+      catch{
+        console.log(item, "this has no parent")
+        item = undefined;
+      }
+
+    }
+    ancestorsList.forEach((ancestor) => ancestor.childrenSold += 1)
+    console.log(ancestorsList, this.data[index])
+  }
+  //findAllAncestors(index){}
+
   makeTransaction(event) {
     function assignFreeNode(userIndex) {
       let two = this.data.filter(element => {
@@ -122,7 +144,7 @@ export class AppComponent implements OnInit {
           bigger = 1;
           break;
       }
-      console.log(two,three,bigger, "i dont fuckig know")
+      console.log(two, three, bigger, "i dont fuckig know")
       // this.data.2.children
       //this.data.3.children
       let index = 0
@@ -131,7 +153,7 @@ export class AppComponent implements OnInit {
 
         if (
           !currentNode.hasOwnProperty("owner")
-          && currentNode.id %2 != bigger) {
+          && currentNode.id % 2 != bigger) {
           this.data[index].owner = this.name.value;
           this.users[userIndex].nodes.push(currentNode.id)
 
@@ -173,6 +195,8 @@ export class AppComponent implements OnInit {
       }
       /////////////////////////expand table
       let nodeIndex = this.data.findIndex(
+        // decide the node to pay out
+        //instead of zero, the highest < 63 children sold node
         (element) => element.id == this.users[userIndex].nodes[0]
       )
       //nodeIndex = 11
@@ -183,10 +207,10 @@ export class AppComponent implements OnInit {
       while (freeChildren.length < ammount) {
         console.log("not enough rows... adding some")
         this.addDataRow()
-       
+
         freeChildren = this.findAllChildren(nodeIndex)
       }
-      ////////////////////////////////////////
+      //deep copy of the data
       let virtualData = JSON.parse(JSON.stringify(this.data))
       // asign one to the first node the user owns
       virtualData[nodeIndex].virtualId = 1
@@ -227,9 +251,10 @@ export class AppComponent implements OnInit {
       console.log("this part is fucky")
       this.addDataRow()
       indexedNodes = createIndexedNodes.call(this).filter((node) => {
-        return !node.hasOwnProperty("owner")})
+        return !node.hasOwnProperty("owner")
+      })
     }
-    
+
     // repeat everything above
     // filter out taken nodes, if less then ammount -> add another row -> repeat
     let index = 0
@@ -242,8 +267,12 @@ export class AppComponent implements OnInit {
 
       // if node has no owner asign the new owner
       if (!dataNode.hasOwnProperty("owner")) {
+        //add +1 sold nodes to all above
         this.data[dataIndex].owner = this.name.value;
         ammount -= 1;
+
+        this.findAllAncestors(dataIndex)
+        console.log(this.data)
       }
       index += 1;
     }
@@ -251,7 +280,7 @@ export class AppComponent implements OnInit {
     this.update()
   }
   update() {
- 
+    console.log("we've made it to update()")
     var scale = d3.scaleOrdinal(d3["schemeSet3"])
       .domain(this.users.map((element) => element.name))
 
@@ -261,7 +290,7 @@ export class AppComponent implements OnInit {
     this.data.sort((a, b) => {
       return a.id - b.id
     })
-// could be skipped if selected = 0
+    // could be skipped if selected = 0
     let children = ["skipped", this.data[this.selected].id, ...this.findAllChildren(this.selected)]
 
     //create a deep copy of the data array
@@ -272,10 +301,10 @@ export class AppComponent implements OnInit {
       return a.id - b.id
     })
     //display only portion of the tree
-    if( this.wholeTree.value == false){
+    if (this.wholeTree.value == false) {
       strippedData.splice(63)
     }
-// first item cant have a parent
+    // first item cant have a parent
     strippedData[0].parent = ""
 
     // stratify the data
@@ -304,7 +333,7 @@ export class AppComponent implements OnInit {
         .y(function (d) { return d.x; }))
       .attr('class', 'link')
       .attr('fill', 'none')
-      .attr('stroke', d=> d.target.data.hasOwnProperty('owner') ? scale(d.source.data.owner) : 'gray')////#aaa
+      .attr('stroke', d => d.target.data.hasOwnProperty('owner') ? scale(d.source.data.owner) : 'gray')////#aaa
       .attr('stroke-width', 2)
 
     // add a group for each node with the specified coordinates
@@ -333,12 +362,12 @@ export class AppComponent implements OnInit {
     })
 
     // add text to each of the node groups
-     enterNodes.append('text')
+    enterNodes.append('text')
       .text((d) => { return d.data.id })
       .attr('fill', "black")
       .attr('transform', d => `translate(${2}, ${10})`);
-       
-    var colorLegend = d3.legendColor()  
+
+    var colorLegend = d3.legendColor()
       .shape("path", d3.symbol().type(d3.symbolTriangle).size(150)())
       .shapePadding(10)
       //use cellFilter to hide the "e" cell
@@ -350,23 +379,23 @@ export class AppComponent implements OnInit {
     this.graph.select(".userLegend").call(colorLegend)
 
     var fisheye = d3.fisheye.circular()
-    .radius(150)
-    .distortion(10);
+      .radius(150)
+      .distortion(10);
     let mario = this
-    if(this.wholeTree.value == true){
-      d3.select('.canvas').on("mousemove", function() {
+    if (this.wholeTree.value == true) {
+      d3.select('.canvas').on("mousemove", function () {
         //have to invert mouse coords for some reason 
         let mouse = d3.mouse(this)
-        let x =mouse[1]
+        let x = mouse[1]
         let y = mouse[0]
-        fisheye.focus([x,y]);
-      
-        enterNodes.each(function(d) {    console.log(d.fisheye);d.fisheye = fisheye(d); })
-     
-          
-            .attr('transform', d => `translate(${d.fisheye.y -5}, ${d.fisheye.x - 10})`)
-          });
-              
+        fisheye.focus([x, y]);
+
+        enterNodes.each(function (d) { console.log(d.fisheye); d.fisheye = fisheye(d); })
+
+
+          .attr('transform', d => `translate(${d.fisheye.y - 5}, ${d.fisheye.x - 10})`)
+      });
+
     }
 
   }
@@ -376,9 +405,9 @@ export class AppComponent implements OnInit {
   // 
 
   ngOnInit() {
-    this.data.push({ id: 1, parent: "", children: [2, 3] })
-    this.data.push({ id: 2, position: "top", parent: { id: 1, parent: null, children: [], position: null }, children: [] })
-    this.data.push({ id: 3, position: "bottom", parent: { id: 1, parent: null, children: [], position: null }, children: [] })
+    this.data.push({ id: 1, parent: "", children: [2, 3], childrenSold: 0 })
+    this.data.push({ id: 2, position: "top", childrenSold: 0, parent: this.data[0], children: [] })
+    this.data.push({ id: 3, position: "bottom", childrenSold: 0, parent: this.data[0], children: [] })
     this.addDataRow()
     this.addDataRow()
     this.addDataRow()
@@ -403,7 +432,7 @@ export class AppComponent implements OnInit {
       .attr('transform', 'translate(50, 50)');
 
     this.update()
-this.wholeTree.valueChanges.subscribe(()=>this.update())
+    this.wholeTree.valueChanges.subscribe(() => this.update())
 
   }
 
