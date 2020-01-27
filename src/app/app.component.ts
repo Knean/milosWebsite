@@ -54,8 +54,8 @@ export class AppComponent implements OnInit {
         this.data[parentIndex].children.length > 0 ? node.position = "top" : node.position = "bottom"
 
         this.data.push(node)
-        this.data[parentIndex].children.push(this.data[newItemId-1])
-   
+        this.data[parentIndex].children.push(this.data[newItemId - 1])
+
       }
       else {
         let parentNumber = Math.round(newItemId / 2) % 2 != 0 ? Math.round(newItemId / 2) : Math.round(newItemId / 2) - 1
@@ -66,7 +66,7 @@ export class AppComponent implements OnInit {
         this.data[parentIndex].children.length > 0 ? node.position = "bottom" : node.position = "top"
 
         this.data.push(node)
-        this.data[parentIndex].children.push(this.data[newItemId-1])
+        this.data[parentIndex].children.push(this.data[newItemId - 1])
       }
     }
   }
@@ -109,27 +109,27 @@ export class AppComponent implements OnInit {
 
   findAllAncestors(index) {
     var ancestorsList = []
+    ancestorsList.push(this.data[index])
     var item = this.data[index].parent
- 
+
     while (typeof item != "undefined") {
-  
+
       ancestorsList.push(item)
-   
+
       try {
         item = this.data.find((node) => node.id == item.parent.id)
       }
       catch{
-       
+
         item = undefined;
       }
 
     }
-   
-     ancestorsList = ancestorsList.filter((item)=> item != '')
-    console.log(ancestorsList, "ancestors list")
-    ancestorsList.forEach((ancestor) => ancestor.childrenSold += 1 )
+
+    ancestorsList = ancestorsList.filter((item) => item != '')
     
-    
+    ancestorsList.forEach((ancestor) => ancestor.childrenSold += 1)
+
   }
   //findAllAncestors(index){}
 
@@ -150,7 +150,7 @@ export class AppComponent implements OnInit {
           bigger = 1;
           break;
       }
-    
+
       // this.data.2.children
       //this.data.3.children
       let index = 0
@@ -170,6 +170,7 @@ export class AppComponent implements OnInit {
       }
       throw ("no nodes found")
     }
+
     let outerThis = this
     this.data.sort((a, b) => a.id - b.id)
     let ammount = this.ammount.value
@@ -194,10 +195,11 @@ export class AppComponent implements OnInit {
         // fix this with a try catch block
 
         assignFreeNode.call(this, userIndex)
-        
+
         ammount--
       }
       /////////////////////////expand table
+      //this is the highest node owned by user
       let nodeIndex = this.data.findIndex(
 
         // decide the node to pay out
@@ -205,11 +207,15 @@ export class AppComponent implements OnInit {
         //sort data by highest children sold
         (element) => element.id == this.users[userIndex].nodes[0]
       )
-      
+      //
       //nodeIndex = 11
 
-      let freeChildren: any = this.findAllChildren(nodeIndex)
-  
+      let freeChildren: any = this.findAllChildren(nodeIndex) 
+          
+
+ 
+  //owners node to pay
+  //overall node to pay decided when giving away first node
 
       // make it so that start node has  62 kids
       while (freeChildren.length < ammount) {
@@ -220,7 +226,7 @@ export class AppComponent implements OnInit {
 
       }
       //deep copy of the data
-      let virtualData = [...this.data].sort((a,b)=>a.id - b.id)
+      let virtualData = [...this.data].sort((a, b) => a.id - b.id)
       console.log(virtualData, "children bought");
       // asign one to the first node the user owns
       virtualData[nodeIndex].virtualId = 1
@@ -228,8 +234,8 @@ export class AppComponent implements OnInit {
       // asign virtual indexes to virtual data
       for (let index = 0; index < freeChildren.length; index++) {
         var parent: any
-        let originalElement = virtualData[index +1]
-        console.log(originalElement, "original element");
+        let originalElement = virtualData[index + 1]
+        
         if (index > 1) {
           //same parent as original node
           parent = virtualData.find((parent) => {
@@ -239,7 +245,7 @@ export class AppComponent implements OnInit {
         } else {
           parent = virtualData[nodeIndex]
         }
-console.log(parent, "parent")
+        
         let childElementIndex = virtualData.findIndex((item) => {
           return item.parent.id == parent.id
             //same position as original node
@@ -259,7 +265,7 @@ console.log(parent, "parent")
       return !node.hasOwnProperty("owner")
     })
     while (indexedNodes.length < this.ammount.value) {
-   
+
       this.addDataRow()
       indexedNodes = createIndexedNodes.call(this).filter((node) => {
         return !node.hasOwnProperty("owner")
@@ -283,20 +289,58 @@ console.log(parent, "parent")
         ammount -= 1;
 
         this.findAllAncestors(dataIndex)
- 
+
       }
       index += 1;
     }
     // if ammount still not zero, add a row and repeat the process
     console.log(this.data[0].childrenSold, "data after purchase")
     this.update()
-    this.data.forEach((item)=>item.virtualId = null)
+    this.data.forEach((item) => item.virtualId = null)
+    
+
+    this.data.sort((a, b) => {
+      var aValue=0;
+       var bValue=0;
+       try {
+         var aUpper = a.children[0];
+         var aValueUpper =aUpper.childrenSold> 32? 32:aUpper.childrenSold
+         aValueUpper += aUpper.hasOwnProperty("owner")? 1:0;
+
+         var aLover = a.children [1];
+         var aValueLower =  aLover.childrenSold> 32? 32: aLover.childrenSold       
+         aValueLower += aLover.hasOwnProperty("owner")? 1:0; 
+
+         aValue = aValueUpper + aValueLower         
+       }
+       catch{
+         aValue = 0
+       }
+       try {
+         var bUpper = b.children[0];
+         var bValueUpper =bUpper.childrenSold> 32? 32:bUpper.childrenSold
+         bValueUpper += bUpper.hasOwnProperty("owner")? 1:0;
+
+         var bLover = b.children[1];
+         var bValueLower =  bLover.childrenSold> 32? 32: bLover.childrenSold
+         bValueLower += bLover.hasOwnProperty("owner")? 1:0;  
+
+         bValue = bValueUpper + bValueLower 
+         
+       }
+       catch{
+         bValue = 0;
+       }
+       console.log(a,aValue, b , bValue)
+       return bValue - aValue
+     })
+     console.log(this.data, "data is sorted?")
   }
   update() {
-    
+
     var scale = d3.scaleOrdinal(d3["schemeSet3"])
       .domain(this.users.map((element) => element.name))
-console.log(this.users)
+    console.log(this.users)
 
     this.graph.selectAll('.node').remove();
     this.graph.selectAll('.link').remove();
@@ -308,13 +352,13 @@ console.log(this.users)
     let children = ["skipped", this.data[this.selected], ...this.findAllChildren(this.selected)]
 
     //create a deep copy of the data array
-    
+
     let strippedData = [...this.data]
-    //wtf does this do?????
-     .filter((element) => children.findIndex((child) => child.id == element.id) > 0 ? true : false)
-    
-     //splice the array so we get the same size tree
-   
+      //wtf does this do?????
+      .filter((element) => children.findIndex((child) => child.id == element.id) > 0 ? true : false)
+
+    //splice the array so we get the same size tree
+
     strippedData.sort((a, b) => {
       return a.id - b.id
     })
@@ -324,27 +368,27 @@ console.log(this.users)
     }
     // first item cant have a parent
     //dodge passing by reference value and messing up main data
-    strippedData[0] = { owner: strippedData[0].owner , id: strippedData[0].id, parent: "", children:strippedData[0].children, childrenSold: strippedData[0].childrenSold },
-     
-    //strippedData[0].parent = null;
-     
+    strippedData[0] = { owner: strippedData[0].owner, id: strippedData[0].id, parent: "", children: strippedData[0].children, childrenSold: strippedData[0].childrenSold },
 
-    // stratify the data
-    this.rootNode = d3.stratify()
-      .id(function (d) {
-        return d.id
-      })
-      .parentId(function (d) {
-        return d.parent.id;
-      })
-      (strippedData).sort((a, b) => a.id % 2 == 1 ? a.id - b.id : b.id - a.id)
+      //strippedData[0].parent = null;
+
+
+      // stratify the data
+      this.rootNode = d3.stratify()
+        .id(function (d) {
+          return d.id
+        })
+        .parentId(function (d) {
+          return d.parent.id;
+        })
+        (strippedData).sort((a, b) => a.id % 2 == 1 ? a.id - b.id : b.id - a.id)
 
     //stratified data -> tree form data
     var treeData = d3.tree().size([1400, 800])(this.rootNode)
     //create the selection of nodes from the tree data descendants
     this.nodes = this.graph.selectAll('.node')
       .data(treeData.descendants())
-      console.log(treeData.descendants());
+    console.log(treeData.descendants());
     // save the links data from the stratified data
     var links = this.graph.selectAll('.link').data(this.rootNode.links())
 
@@ -371,7 +415,7 @@ console.log(this.users)
 
     // draw rectangles in each node group
     var rectangles = enterNodes.append('rect')
-      .attr('fill', d =>  d.data.owner != null  ? scale(d.data.owner) : 'gray')
+      .attr('fill', d => d.data.owner != null ? scale(d.data.owner) : 'gray')
       .attr('stroke', 'black')
       .attr('width', 30)//30
       .attr('height', 30)
@@ -432,8 +476,8 @@ console.log(this.users)
       { id: 1, parent: "", children: [], childrenSold: 0 },
       { id: 2, position: "top", childrenSold: 0, parent: null, children: [] },
       { id: 3, position: "bottom", childrenSold: 0, parent: null, children: [] }]
-    this.data[0].children = [this.data[1],this.data[2]]
-    
+    this.data[0].children = [this.data[1], this.data[2]]
+
     this.data[2].parent = this.data[0]
     this.data[1].parent = this.data[0]
 
