@@ -106,7 +106,26 @@ export class AppComponent implements OnInit {
     return childrenList
 
   }
+  nodesUntilPayout(a) :number {
+    var aValue = 0;
 
+    try {
+      var aUpper = a.children[0];
+      var aValueUpper = aUpper.childrenSold > 32 ? 32 : aUpper.childrenSold
+      aValueUpper += aUpper.hasOwnProperty("owner") ? 1 : 0;
+
+      var aLover = a.children[1];
+      var aValueLower = aLover.childrenSold > 32 ? 32 : aLover.childrenSold
+      aValueLower += aLover.hasOwnProperty("owner") ? 1 : 0;
+
+      aValue = aValueUpper + aValueLower
+    }
+    catch{
+      //if it has no children
+      aValue = 0
+    }
+    return 64 - aValue
+  }
   findAllAncestors(index) {
     var ancestorsList = []
     ancestorsList.push(this.data[index])
@@ -127,13 +146,32 @@ export class AppComponent implements OnInit {
     }
 
     ancestorsList = ancestorsList.filter((item) => item != '')
-    
-    ancestorsList.forEach((ancestor) => ancestor.childrenSold += 1)
 
+    ancestorsList.forEach((ancestor) => {
+      ancestor.childrenSold += 1;
+      ancestor.sold = !(this.nodesUntilPayout(ancestor) > 0)
+      //check if ancestor is paid!
+
+    })
+}
+  //findAllAncestors(index){} || add virtual index to sort
+findPaymentPriorityChild(index = 0){
+var sortedData =this.findAllChildren(index).sort((a,b)=>{
+  var aNodes = this.nodesUntilPayout(a)
+  var bNodes = this.nodesUntilPayout(b) 
+  var result = bNodes - aNodes
+  // if values equal, sort by id
+  if (result == 0){
+    return b.id - a.id
   }
-  //findAllAncestors(index){}
-
+  else{
+    return result;
+  }
+})
+return sortedData[0]
+}
   makeTransaction(event) {
+    // completely obsolete!
     function assignFreeNode(userIndex) {
       let two = this.data.filter(element => {
         return element.id % 2 == 0 && element.hasOwnProperty("owner")
@@ -174,7 +212,7 @@ export class AppComponent implements OnInit {
     let outerThis = this
     this.data.sort((a, b) => a.id - b.id)
     let ammount = this.ammount.value
-    //make this multipurpose!!!!
+    // assigns virtual indexes, 
     function createIndexedNodes() {
       let name = this.name.value
       let userIndex = this.users.findIndex((user) => user.name == name)
@@ -210,12 +248,12 @@ export class AppComponent implements OnInit {
       //
       //nodeIndex = 11
 
-      let freeChildren: any = this.findAllChildren(nodeIndex) 
-          
+      let freeChildren: any = this.findAllChildren(nodeIndex)
 
- 
-  //owners node to pay
-  //overall node to pay decided when giving away first node
+
+
+      //owners node to pay
+      //overall node to pay decided when giving away first node
 
       // make it so that start node has  62 kids
       while (freeChildren.length < ammount) {
@@ -227,7 +265,7 @@ export class AppComponent implements OnInit {
       }
       //deep copy of the data
       let virtualData = [...this.data].sort((a, b) => a.id - b.id)
-      console.log(virtualData, "children bought");
+     
       // asign one to the first node the user owns
       virtualData[nodeIndex].virtualId = 1
 
@@ -235,7 +273,7 @@ export class AppComponent implements OnInit {
       for (let index = 0; index < freeChildren.length; index++) {
         var parent: any
         let originalElement = virtualData[index + 1]
-        
+
         if (index > 1) {
           //same parent as original node
           parent = virtualData.find((parent) => {
@@ -245,7 +283,7 @@ export class AppComponent implements OnInit {
         } else {
           parent = virtualData[nodeIndex]
         }
-        
+
         let childElementIndex = virtualData.findIndex((item) => {
           return item.parent.id == parent.id
             //same position as original node
@@ -294,53 +332,53 @@ export class AppComponent implements OnInit {
       index += 1;
     }
     // if ammount still not zero, add a row and repeat the process
-    console.log(this.data[0].childrenSold, "data after purchase")
+  
     this.update()
     this.data.forEach((item) => item.virtualId = null)
-    
 
+/*
     this.data.sort((a, b) => {
-      var aValue=0;
-       var bValue=0;
-       try {
-         var aUpper = a.children[0];
-         var aValueUpper =aUpper.childrenSold> 32? 32:aUpper.childrenSold
-         aValueUpper += aUpper.hasOwnProperty("owner")? 1:0;
+      var aValue = 0;
+      var bValue = 0;
+      try {
+        var aUpper = a.children[0];
+        var aValueUpper = aUpper.childrenSold > 32 ? 32 : aUpper.childrenSold
+        aValueUpper += aUpper.hasOwnProperty("owner") ? 1 : 0;
 
-         var aLover = a.children [1];
-         var aValueLower =  aLover.childrenSold> 32? 32: aLover.childrenSold       
-         aValueLower += aLover.hasOwnProperty("owner")? 1:0; 
+        var aLover = a.children[1];
+        var aValueLower = aLover.childrenSold > 32 ? 32 : aLover.childrenSold
+        aValueLower += aLover.hasOwnProperty("owner") ? 1 : 0;
 
-         aValue = aValueUpper + aValueLower         
-       }
-       catch{
-         aValue = 0
-       }
-       try {
-         var bUpper = b.children[0];
-         var bValueUpper =bUpper.childrenSold> 32? 32:bUpper.childrenSold
-         bValueUpper += bUpper.hasOwnProperty("owner")? 1:0;
+        aValue = aValueUpper + aValueLower
+      }
+      catch{
+        aValue = 0
+      }
+      try {
+        var bUpper = b.children[0];
+        var bValueUpper = bUpper.childrenSold > 32 ? 32 : bUpper.childrenSold
+        bValueUpper += bUpper.hasOwnProperty("owner") ? 1 : 0;
 
-         var bLover = b.children[1];
-         var bValueLower =  bLover.childrenSold> 32? 32: bLover.childrenSold
-         bValueLower += bLover.hasOwnProperty("owner")? 1:0;  
+        var bLover = b.children[1];
+        var bValueLower = bLover.childrenSold > 32 ? 32 : bLover.childrenSold
+        bValueLower += bLover.hasOwnProperty("owner") ? 1 : 0;
 
-         bValue = bValueUpper + bValueLower 
-         
-       }
-       catch{
-         bValue = 0;
-       }
-       console.log(a,aValue, b , bValue)
-       return bValue - aValue
-     })
-     console.log(this.data, "data is sorted?")
+        bValue = bValueUpper + bValueLower
+
+      }
+      catch{
+        bValue = 0;
+      }
+     
+      return bValue - aValue
+    }) */
+ 
   }
   update() {
 
     var scale = d3.scaleOrdinal(d3["schemeSet3"])
       .domain(this.users.map((element) => element.name))
-    console.log(this.users)
+    
 
     this.graph.selectAll('.node').remove();
     this.graph.selectAll('.link').remove();
@@ -368,7 +406,7 @@ export class AppComponent implements OnInit {
     }
     // first item cant have a parent
     //dodge passing by reference value and messing up main data
-    strippedData[0] = { owner: strippedData[0].owner, id: strippedData[0].id, parent: "", children: strippedData[0].children, childrenSold: strippedData[0].childrenSold },
+    strippedData[0] = { owner: strippedData[0].owner, id: strippedData[0].id, parent: "", children: strippedData[0].children, childrenSold: strippedData[0].childrenSold ,sold:strippedData[0].sold},
 
       //strippedData[0].parent = null;
 
@@ -388,7 +426,7 @@ export class AppComponent implements OnInit {
     //create the selection of nodes from the tree data descendants
     this.nodes = this.graph.selectAll('.node')
       .data(treeData.descendants())
-    console.log(treeData.descendants());
+    
     // save the links data from the stratified data
     var links = this.graph.selectAll('.link').data(this.rootNode.links())
 
@@ -431,7 +469,7 @@ export class AppComponent implements OnInit {
     // add text to each of the node groups
     enterNodes.append('text')
       .text((d) => { return d.data.id })
-      .attr('fill', "black")
+      .attr('fill', d =>d.data.sold? "red":'black')
       .attr('transform', d => `translate(${2}, ${10})`);
 
     var colorLegend = d3.legendColor()
@@ -457,7 +495,7 @@ export class AppComponent implements OnInit {
         let y = mouse[0]
         fisheye.focus([x, y]);
 
-        enterNodes.each(function (d) { console.log(d.fisheye); d.fisheye = fisheye(d); })
+        enterNodes.each(function (d) { d.fisheye = fisheye(d); })
 
 
           .attr('transform', d => `translate(${d.fisheye.y - 5}, ${d.fisheye.x - 10})`)
