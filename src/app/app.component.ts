@@ -4,6 +4,7 @@ import { FormControl } from '@angular/forms';
 import { analyzeAndValidateNgModules } from '@angular/compiler';
 import { element } from '@angular/core/src/render3';
 import { JsonPipe } from '@angular/common';
+import { ɵangular_packages_platform_browser_dynamic_platform_browser_dynamic_a } from '@angular/platform-browser-dynamic';
 declare const d3;
 //declare const fisheye;
 declare var graph;
@@ -93,6 +94,7 @@ export class AppComponent implements OnInit {
 
     childrenList = childrenList.concat(this.data[index].children)
 
+
     while (childstack.length > 0) {
 
       var current = childstack.pop()
@@ -100,9 +102,7 @@ export class AppComponent implements OnInit {
         childstack = childstack.concat(produceIndexes(this.data[current].children))
 
         childrenList = childrenList.concat(this.data[current].children)
-
       }
-
     }
     childrenList = childrenList.sort((a, b) => a - b)
     return childrenList
@@ -131,7 +131,13 @@ export class AppComponent implements OnInit {
   findAllAncestors(index) {
     var ancestorsList = []
     ancestorsList.push(this.data[index])
-    var item = this.data[index].parent
+    var item;
+    try {
+      item = this.data[index].parent
+    }
+    catch{
+      item = undefined
+    }
 
     while (typeof item != "undefined") {
 
@@ -171,12 +177,22 @@ export class AppComponent implements OnInit {
         return result;
       }
     })
-    return sortedData.filter((node) => node.sold == false).reverse()
+    return sortedData.reverse()
   }
   makeTransaction(event) {
     // completely obsolete!
+
     function assignFreeNode(userIndex) {
-      let two = this.data.filter(element => {
+      //sold means paid out
+      var sortedNodes = this.findPaymentPriorityChild(this.data).filter(item => item.sold != true)
+      //var payNode = sortedNodes[0]
+      var children = sortedNodes[0].children.sort((a,b)=>a.childrenSold - b.childrenSold)
+      var index = this.data.findIndex((node)=> node.id = children[0].id)
+      var childrenlist = this.findAllChildren(1)//.push(children[0]).filter((item)=>item.sold == false)
+      childrenlist.sort((a,b)=> a.id - b.id)
+      var payNode = childrenlist[0]
+
+      /*let two = this.data.filter(element => {
         return element.id % 2 == 0 && element.hasOwnProperty("owner")
       })
       let three = this.data.filter(element => {
@@ -202,23 +218,29 @@ export class AppComponent implements OnInit {
           !currentNode.hasOwnProperty("owner")
           && currentNode.id % 2 != bigger) {
           this.data[index].owner = this.name.value;
-          //use nodes instead of ids
-          this.users[this.userIndex].nodes.push(currentNode)
-          this.findAllAncestors(index)
-          return
+          //use nodes instead of ids*/
+      this.data.sort((a, b) => a.id - b.id)
+      var index = this.data.findIndex((node) => node.id == payNode.id)
+      this.users[this.userIndex].nodes.push(payNode)
+      this.data[index].owner = this.name.value;
+      this.findAllAncestors(index)
 
-        }
-        index += 1;
-      }
-      throw ("no nodes found")
+
     }
     function createIndexedNodes(nodeIndex) {
-
+      ammount = this.ammount.value
       //
       //nodeIndex = 11
       //pick a weaker child
+      let freeChildren: any = []
+      try {
 
-      let freeChildren: any = this.findAllChildren(nodeIndex)
+        freeChildren = this.findAllChildren(nodeIndex)
+      }
+      catch{
+        this.addDataRow()
+        freeChildren = this.findAllChildren(nodeIndex)
+      }
 
 
 
@@ -252,7 +274,7 @@ export class AppComponent implements OnInit {
         } else {
           parent = virtualData[nodeIndex]
         }
-
+        this.data.sort((a, b) => a.id - b.id)
         let childElementIndex = virtualData.findIndex((item) => {
           return item.parent.id == parent.id
             //same position as original node
@@ -310,24 +332,27 @@ export class AppComponent implements OnInit {
 
 
     console.log(this.findPaymentPriorityChild(this.users[this.userIndex].nodes), "payment priority list")
-    var fakeList = this.findPaymentPriorityChild(this.users[this.userIndex].nodes)
+    var fakeList = this.findPaymentPriorityChild(this.users[this.userIndex].nodes).filter((node) => node.sold == false)
 
     var child1 = fakeList[0].children[0];
     var child2 = fakeList[0].children[1];
     var child1Value = this.nodesUntilPayout(child1)
-    var child1Pay = 0
+    var child1Pay = 0 - child1Value;
     var child2Value = this.nodesUntilPayout(child2)
-    var child2Pay = 0
-    while(ammount >0){
-      
-      child1Value < child2Value? child1Pay : child2Pay ++
-      child1Value < child2Value? child1Value : child2Value --
-      ammount --
+    var child2Pay = 0 - child2Value;
+    var kidsToFeed = [{ node: child1, value: child1Value, pay: 0 }, { node: child2, value: child2Value, pay: 0 }]
+    while (ammount > 0) {
+      kidsToFeed.sort((a, b) => b.value - a.value)
+
+      kidsToFeed[0].pay++
+      kidsToFeed[0].value--
+      ammount--
     }
 
     //var smallerChild = this.nodesUntilPayout(child1) > this.nodesUntilPayout(child2) ? child1 : child2;
     //while smallerchild is smaller
-pay.call(this, child1,child1Value)
+    pay.call(this, kidsToFeed[0].node, kidsToFeed[0].pay)
+    pay.call(this, kidsToFeed[1].node, kidsToFeed[1].pay)
     //loop this twice
     function pay(node, ammount) {
       let nodeIndex = this.data.findIndex(
