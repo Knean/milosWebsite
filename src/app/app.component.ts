@@ -8,6 +8,7 @@ declare const d3;
 //declare const fisheye;
 declare var graph;
 declare var rootNode;
+declare var userIndex;
 @Component({
 
   selector: 'app-root',
@@ -34,6 +35,7 @@ export class AppComponent implements OnInit {
   name = new FormControl('Bob')
   ammount = new FormControl('10')
   wholeTree = new FormControl(false)
+  userIndex = null;
   users: any[] = []
   resetView() {
     this.selected = 0
@@ -106,7 +108,7 @@ export class AppComponent implements OnInit {
     return childrenList
 
   }
-  nodesUntilPayout(a) :number {
+  nodesUntilPayout(a): number {
     var aValue = 0;
 
     try {
@@ -153,23 +155,24 @@ export class AppComponent implements OnInit {
       //check if ancestor is paid!
 
     })
-}
+  }
+  //should work with a node list
   //findAllAncestors(index){} || add virtual index to sort
-findPaymentPriorityChild(index = 0){
-var sortedData =this.findAllChildren(index).sort((a,b)=>{
-  var aNodes = this.nodesUntilPayout(a)
-  var bNodes = this.nodesUntilPayout(b) 
-  var result = bNodes - aNodes
-  // if values equal, sort by id
-  if (result == 0){
-    return b.id - a.id
+  findPaymentPriorityChild(nodes) {
+    var sortedData = nodes.sort((a, b) => {
+      var aNodes = this.nodesUntilPayout(a)
+      var bNodes = this.nodesUntilPayout(b)
+      var result = bNodes - aNodes
+      // if values equal, sort by id
+      if (result == 0) {
+        return b.id - a.id
+      }
+      else {
+        return result;
+      }
+    })
+    return sortedData.filter((node) => node.sold == false).reverse()
   }
-  else{
-    return result;
-  }
-})
-return sortedData[0]
-}
   makeTransaction(event) {
     // completely obsolete!
     function assignFreeNode(userIndex) {
@@ -199,7 +202,8 @@ return sortedData[0]
           !currentNode.hasOwnProperty("owner")
           && currentNode.id % 2 != bigger) {
           this.data[index].owner = this.name.value;
-          this.users[userIndex].nodes.push(currentNode.id)
+          //use nodes instead of ids
+          this.users[this.userIndex].nodes.push(currentNode)
           this.findAllAncestors(index)
           return
 
@@ -208,54 +212,18 @@ return sortedData[0]
       }
       throw ("no nodes found")
     }
+    function createIndexedNodes(nodeIndex) {
 
-    let outerThis = this
-    this.data.sort((a, b) => a.id - b.id)
-    let ammount = this.ammount.value
-    // assigns virtual indexes, 
-    function createIndexedNodes() {
-      let name = this.name.value
-      let userIndex = this.users.findIndex((user) => user.name == name)
-      //if user is new add user to the list
-      if (userIndex < 0) {
-
-        this.users.push({ name: name, nodes: [] })
-        userIndex = this.users.length - 1
-
-      }
-      // claim nodes
-      // data filtered by children
-      // make that data the 
-
-
-
-      if (this.users[userIndex].nodes.length == 0) {
-        // fix this with a try catch block
-
-        assignFreeNode.call(this, userIndex)
-
-        ammount--
-      }
-      /////////////////////////expand table
-      //this is the highest node owned by user
-      let nodeIndex = this.data.findIndex(
-
-        // decide the node to pay out
-        //instead of zero, the highest < 63 children sold node
-        //sort data by highest children sold
-        (element) => element.id == this.users[userIndex].nodes[0]
-      )
       //
       //nodeIndex = 11
+      //pick a weaker child
 
       let freeChildren: any = this.findAllChildren(nodeIndex)
 
 
 
-      //owners node to pay
-      //overall node to pay decided when giving away first node
-
-      // make it so that start node has  62 kids
+      //expand table so there are enough kids
+      // add filter out sold kids
       while (freeChildren.length < ammount) {
         console.log("not enough rows... adding some")
         this.addDataRow()
@@ -263,10 +231,11 @@ return sortedData[0]
         freeChildren = this.findAllChildren(nodeIndex)
 
       }
-      //deep copy of the data
+      //shallow copy of the data
       let virtualData = [...this.data].sort((a, b) => a.id - b.id)
-     
+
       // asign one to the first node the user owns
+
       virtualData[nodeIndex].virtualId = 1
 
       // asign virtual indexes to virtual data
@@ -299,86 +268,160 @@ return sortedData[0]
         .sort((a, b) => a.virtualId - b.virtualId)
       return indexedNodes
     }
-    let indexedNodes = createIndexedNodes.call(this).filter((node) => {
-      return !node.hasOwnProperty("owner")
-    })
-    while (indexedNodes.length < this.ammount.value) {
 
-      this.addDataRow()
-      indexedNodes = createIndexedNodes.call(this).filter((node) => {
+    let outerThis = this
+    this.data.sort((a, b) => a.id - b.id)
+    let ammount = this.ammount.value
+    // assigns virtual indexes, 
+
+    //select element here and use as input
+    //complete rewrite
+    let name = this.name.value
+    this.userIndex = this.users.findIndex((user) => user.name == name)
+    //if user is new add user to the list
+    if (this.userIndex < 0) {
+
+      this.users.push({ name: name, nodes: [] })
+      this.userIndex = this.users.length - 1
+
+    }
+    // claim nodes
+    // data filtered by children
+    // make that data the 
+
+
+
+    if (this.users[this.userIndex].nodes.length == 0) {
+      // fix this with a try catch block
+
+      assignFreeNode.call(this, this.userIndex)
+
+      ammount--
+    }
+
+
+
+    /////////////////////////expand table
+    //this is the highest node owned by user
+    // console.log(this.data)
+    //console.log(this.users);
+
+
+
+
+    console.log(this.findPaymentPriorityChild(this.users[this.userIndex].nodes), "payment priority list")
+    var fakeList = this.findPaymentPriorityChild(this.users[this.userIndex].nodes)
+
+    var child1 = fakeList[0].children[0];
+    var child2 = fakeList[0].children[1];
+    var child1Value = this.nodesUntilPayout(child1)
+    var child1Pay = 0
+    var child2Value = this.nodesUntilPayout(child2)
+    var child2Pay = 0
+    while(ammount >0){
+      
+      child1Value < child2Value? child1Pay : child2Pay ++
+      child1Value < child2Value? child1Value : child2Value --
+      ammount --
+    }
+
+    //var smallerChild = this.nodesUntilPayout(child1) > this.nodesUntilPayout(child2) ? child1 : child2;
+    //while smallerchild is smaller
+pay.call(this, child1,child1Value)
+    //loop this twice
+    function pay(node, ammount) {
+      let nodeIndex = this.data.findIndex(
+
+        // decide the node to pay out
+        //instead of zero, the highest < 63 children sold node
+        //sort data by highest children sold
+        (element) => element.id == node.id
+        //(element) => element.id == smallerChild.id
+      )
+      let indexedNodes = createIndexedNodes.call(this, nodeIndex).filter((node) => {
         return !node.hasOwnProperty("owner")
       })
-    }
+      while (indexedNodes.length < this.ammount.value) {
 
-    // repeat everything above
-    // filter out taken nodes, if less then ammount -> add another row -> repeat
-    let index = 0
-    while (ammount > 0 && index < indexedNodes.length) {
-      let dataIndex = this.data.findIndex((element) => {
-        return element.id == indexedNodes[index].id
-      })
-
-      let dataNode = this.data[dataIndex]
-
-      // if node has no owner asign the new owner
-      if (!dataNode.hasOwnProperty("owner")) {
-        //add +1 sold nodes to all above
-        this.data[dataIndex].owner = this.name.value;
-        ammount -= 1;
-
-        this.findAllAncestors(dataIndex)
-
+        this.addDataRow()
+        indexedNodes = createIndexedNodes.call(this).filter((node) => {
+          return !node.hasOwnProperty("owner")
+        })
       }
-      index += 1;
+
+      // repeat everything above
+      // filter out taken nodes, if less then ammount -> add another row -> repeat
+      let index = 0
+      while (ammount > 0 && index < indexedNodes.length) {
+        let dataIndex = this.data.findIndex((element) => {
+          return element.id == indexedNodes[index].id
+        })
+
+        let dataNode = this.data[dataIndex]
+
+        // if node has no owner asign the new owner
+        if (!dataNode.hasOwnProperty("owner")) {
+          //add +1 sold nodes to all above
+          this.data[dataIndex].owner = this.name.value;
+          this.users[this.userIndex].nodes.push(dataNode);
+          ammount -= 1;
+
+          this.findAllAncestors(dataIndex)
+
+        }
+        index += 1;
+      }
+
     }
+
     // if ammount still not zero, add a row and repeat the process
-  
+
     this.update()
     this.data.forEach((item) => item.virtualId = null)
 
-/*
-    this.data.sort((a, b) => {
-      var aValue = 0;
-      var bValue = 0;
-      try {
-        var aUpper = a.children[0];
-        var aValueUpper = aUpper.childrenSold > 32 ? 32 : aUpper.childrenSold
-        aValueUpper += aUpper.hasOwnProperty("owner") ? 1 : 0;
+    /*
+        this.data.sort((a, b) => {
+          var aValue = 0;
+          var bValue = 0;
+          try {
+            var aUpper = a.children[0];
+            var aValueUpper = aUpper.childrenSold > 32 ? 32 : aUpper.childrenSold
+            aValueUpper += aUpper.hasOwnProperty("owner") ? 1 : 0;
+    
+            var aLover = a.children[1];
+            var aValueLower = aLover.childrenSold > 32 ? 32 : aLover.childrenSold
+            aValueLower += aLover.hasOwnProperty("owner") ? 1 : 0;
+    
+            aValue = aValueUpper + aValueLower
+          }
+          catch{
+            aValue = 0
+          }
+          try {
+            var bUpper = b.children[0];
+            var bValueUpper = bUpper.childrenSold > 32 ? 32 : bUpper.childrenSold
+            bValueUpper += bUpper.hasOwnProperty("owner") ? 1 : 0;
+    
+            var bLover = b.children[1];
+            var bValueLower = bLover.childrenSold > 32 ? 32 : bLover.childrenSold
+            bValueLower += bLover.hasOwnProperty("owner") ? 1 : 0;
+    
+            bValue = bValueUpper + bValueLower
+    
+          }
+          catch{
+            bValue = 0;
+          }
+         
+          return bValue - aValue
+        }) */
 
-        var aLover = a.children[1];
-        var aValueLower = aLover.childrenSold > 32 ? 32 : aLover.childrenSold
-        aValueLower += aLover.hasOwnProperty("owner") ? 1 : 0;
-
-        aValue = aValueUpper + aValueLower
-      }
-      catch{
-        aValue = 0
-      }
-      try {
-        var bUpper = b.children[0];
-        var bValueUpper = bUpper.childrenSold > 32 ? 32 : bUpper.childrenSold
-        bValueUpper += bUpper.hasOwnProperty("owner") ? 1 : 0;
-
-        var bLover = b.children[1];
-        var bValueLower = bLover.childrenSold > 32 ? 32 : bLover.childrenSold
-        bValueLower += bLover.hasOwnProperty("owner") ? 1 : 0;
-
-        bValue = bValueUpper + bValueLower
-
-      }
-      catch{
-        bValue = 0;
-      }
-     
-      return bValue - aValue
-    }) */
- 
   }
   update() {
 
     var scale = d3.scaleOrdinal(d3["schemeSet3"])
       .domain(this.users.map((element) => element.name))
-    
+
 
     this.graph.selectAll('.node').remove();
     this.graph.selectAll('.link').remove();
@@ -406,7 +449,7 @@ return sortedData[0]
     }
     // first item cant have a parent
     //dodge passing by reference value and messing up main data
-    strippedData[0] = { owner: strippedData[0].owner, id: strippedData[0].id, parent: "", children: strippedData[0].children, childrenSold: strippedData[0].childrenSold ,sold:strippedData[0].sold},
+    strippedData[0] = { owner: strippedData[0].owner, id: strippedData[0].id, parent: "", children: strippedData[0].children, childrenSold: strippedData[0].childrenSold, sold: strippedData[0].sold },
 
       //strippedData[0].parent = null;
 
@@ -426,7 +469,7 @@ return sortedData[0]
     //create the selection of nodes from the tree data descendants
     this.nodes = this.graph.selectAll('.node')
       .data(treeData.descendants())
-    
+
     // save the links data from the stratified data
     var links = this.graph.selectAll('.link').data(this.rootNode.links())
 
@@ -469,7 +512,7 @@ return sortedData[0]
     // add text to each of the node groups
     enterNodes.append('text')
       .text((d) => { return d.data.id })
-      .attr('fill', d =>d.data.sold? "red":'black')
+      .attr('fill', d => d.data.sold ? "red" : 'black')
       .attr('transform', d => `translate(${2}, ${10})`);
 
     var colorLegend = d3.legendColor()
