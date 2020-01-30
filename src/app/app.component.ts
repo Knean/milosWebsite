@@ -33,6 +33,7 @@ export class AppComponent implements OnInit {
   data = []
   title = 'milosWebsite';
   selected = 0;
+  selectedInfo = null
   name = new FormControl('Bob')
   ammount = new FormControl('10')
   wholeTree = new FormControl(false)
@@ -53,7 +54,7 @@ export class AppComponent implements OnInit {
         let parentIndex = this.data.findIndex((element) => element.id == parentNumber)
         let parent = this.data.find((element) => element.id == parentNumber)
 
-        let node = { id: newItemId, parent: parent, children: [], position: null, childrenSold: 0 }
+        let node = { id: newItemId, parent: parent, children: [], position: null, childrenSold: 0, sold: false }
         this.data[parentIndex].children.length > 0 ? node.position = "top" : node.position = "bottom"
 
         this.data.push(node)
@@ -65,7 +66,7 @@ export class AppComponent implements OnInit {
         let parentIndex = this.data.findIndex((element) => element.id == parentNumber)
         let parent = this.data.find((element) => element.id == parentNumber)
 
-        let node = { id: newItemId, parent: parent, children: [], position: null, childrenSold: 0 }
+        let node = { id: newItemId, parent: parent, children: [], position: null, childrenSold: 0, sold: false }
         this.data[parentIndex].children.length > 0 ? node.position = "bottom" : node.position = "top"
 
         this.data.push(node)
@@ -179,54 +180,53 @@ export class AppComponent implements OnInit {
     })
     return sortedData.reverse()
   }
+  findChildrenWidthFirst(node) {
+    var results = [[node]]
+    let index = 0
+    while (true) {
+      var children = []
+      results[index].forEach(element => {
+        element.children.forEach(elementChild => {
+          children.push(elementChild)
+        });
+      });
+      if (children.length > 0) {
+        results.push(children)
+        index++
+      }
+
+      else {
+        return results
+      }
+    }
+  }
   makeTransaction(event) {
     // completely obsolete!
 
     function assignFreeNode(userIndex) {
-      //sold means paid out
-      var sortedNodes = this.findPaymentPriorityChild(this.data).filter(item => item.sold != true)
-      //var payNode = sortedNodes[0]
-      var children = sortedNodes[0].children.sort((a,b)=>a.childrenSold - b.childrenSold)
-      var index = this.data.findIndex((node)=> node.id = children[0].id)
-      var childrenlist = this.findAllChildren(1)//.push(children[0]).filter((item)=>item.sold == false)
-      childrenlist.sort((a,b)=> a.id - b.id)
-      var payNode = childrenlist[0]
+      this.data.sort((a, b) => a.id - b.id)
+      var assignedNode = null;
+      var suggestedNode = this.data[0]
+      while (assignedNode == null) {
 
-      /*let two = this.data.filter(element => {
-        return element.id % 2 == 0 && element.hasOwnProperty("owner")
-      })
-      let three = this.data.filter(element => {
-        return element.id % 2 == 1 && element.hasOwnProperty("owner")
-      })
-      let bigger = 1
-      switch (two.length >= three.length) {
-        case true:
-          bigger = 0;
-          break;
-        case false:
-          bigger = 1;
-          break;
+        if (suggestedNode.childrenSold == 0) {
+          assignedNode = suggestedNode
+        }
+        else {
+          if (suggestedNode.children[0].childrenSold < suggestedNode.children[1].childrenSold) {
+            suggestedNode = suggestedNode.children[0]
+          }
+          else { suggestedNode = suggestedNode.children[1] }
+        }
       }
 
-      // this.data.2.children
-      //this.data.3.children
-      let index = 0
-      while (index < this.data.length) {
-        let currentNode = this.data[index]
-
-        if (
-          !currentNode.hasOwnProperty("owner")
-          && currentNode.id % 2 != bigger) {
-          this.data[index].owner = this.name.value;
-          //use nodes instead of ids*/
-      this.data.sort((a, b) => a.id - b.id)
-      var index = this.data.findIndex((node) => node.id == payNode.id)
-      this.users[this.userIndex].nodes.push(payNode)
-      this.data[index].owner = this.name.value;
-      this.findAllAncestors(index)
-
+      this.users[userIndex].nodes.push(assignedNode)
+      assignedNode.owner = this.name.value
+      this.findAllAncestors(this.data.findIndex((item)=>item.id == assignedNode.id))
+      return assignedNode
 
     }
+
     function createIndexedNodes(nodeIndex) {
       ammount = this.ammount.value
       //
@@ -450,7 +450,6 @@ export class AppComponent implements OnInit {
 
     this.graph.selectAll('.node').remove();
     this.graph.selectAll('.link').remove();
-
     this.data.sort((a, b) => {
       return a.id - b.id
     })
@@ -526,13 +525,56 @@ export class AppComponent implements OnInit {
       .attr('width', 30)//30
       .attr('height', 30)
       .attr('transform', d => `translate(${-5}, ${-10})`).raise();
+
+    var infoBoxes = enterNodes.append('rect')
+      .attr('fill', d => 'green')
+      .attr('stroke', 'black')
+      .attr('width', 150)//30
+      .attr('height', 65)
+      .attr('display', d => d.data.id == this.selectedInfo ? "block" : "none")
+      .attr('transform', d => `translate(${-5}, ${-100})`)
     // add a click event on each rectangle
+
+    enterNodes.append('text')
+      .text((d) => {
+        return `children sold: ${d.data.childrenSold} `
+    
+      })
+      .attr('transform', d => `translate(${0}, ${-85})`)
+      .attr('display', d => d.data.id == this.selectedInfo ? "block" : "none")
+
+      enterNodes.append('text')
+      .text((d) => {
+        return `owner: ${d.data.owner}`
+      })
+      .attr('transform', d => `translate(${0}, ${-65})`)
+      .attr('display', d => d.data.id == this.selectedInfo ? "block" : "none")
+
+    enterNodes.on("mouseover", (d) => {
+      console.log(d)
+
+      this.selectedInfo = d.data.id;
+      d3.select(this)
+      d3.select(this)
+      .style("stroke", "steelblue")
+
+    })
+
     enterNodes.on("click", (d) => {
       console.log(d)
 
       this.selected = d.data.id - 1;
       this.update()
     })
+    enterNodes.on("mouseleave", function(d) {
+      console.log(d)
+
+      this.selectedInfo = 0;
+      d3.select(this)
+      .stroke("steelblue")
+    })
+
+
 
     // add text to each of the node groups
     enterNodes.append('text')
@@ -579,9 +621,9 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     this.data = [
-      { id: 1, parent: "", children: [], childrenSold: 0 },
-      { id: 2, position: "top", childrenSold: 0, parent: null, children: [] },
-      { id: 3, position: "bottom", childrenSold: 0, parent: null, children: [] }]
+      { id: 1, parent: "", children: [], childrenSold: 0, sold: false },
+      { id: 2, position: "top", childrenSold: 0, parent: null, children: [], sold: false },
+      { id: 3, position: "bottom", childrenSold: 0, parent: null, children: [], sold: false }]
     this.data[0].children = [this.data[1], this.data[2]]
 
     this.data[2].parent = this.data[0]
@@ -591,7 +633,7 @@ export class AppComponent implements OnInit {
     this.addDataRow()
     this.addDataRow()
     this.addDataRow()
-
+    let random = this.findChildrenWidthFirst(this.data[1])
 
 
 
