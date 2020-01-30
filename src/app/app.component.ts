@@ -105,7 +105,7 @@ export class AppComponent implements OnInit {
         childrenList = childrenList.concat(this.data[current].children)
       }
     }
-    childrenList = childrenList.sort((a, b) => a - b)
+    childrenList = childrenList.sort((a, b) => a.id - b.id)
     return childrenList
 
   }
@@ -180,7 +180,7 @@ export class AppComponent implements OnInit {
     })
     return sortedData.reverse()
   }
-  findChildrenWidthFirst(node) {
+  findChildrenWidthFirst(node,leveled = true) {
     var results = [[node]]
     let index = 0
     while (true) {
@@ -196,6 +196,13 @@ export class AppComponent implements OnInit {
       }
 
       else {
+        if(leveled == false){
+          var plainResults = []
+          results.forEach((list)=> {
+            list.forEach((node)=>plainResults.push(node))
+          })
+          return plainResults
+        }
         return results
       }
     }
@@ -228,6 +235,7 @@ export class AppComponent implements OnInit {
     }
 
     function createIndexedNodes(nodeIndex) {
+      this.data.sort((a,b)=>a.id-b.id)
       ammount = this.ammount.value
       //
       //nodeIndex = 11
@@ -325,13 +333,8 @@ export class AppComponent implements OnInit {
 
     /////////////////////////expand table
     //this is the highest node owned by user
-    // console.log(this.data)
-    //console.log(this.users);
 
-
-
-
-    console.log(this.findPaymentPriorityChild(this.users[this.userIndex].nodes), "payment priority list")
+  
     var fakeList = this.findPaymentPriorityChild(this.users[this.userIndex].nodes).filter((node) => node.sold == false)
 
     var child1 = fakeList[0].children[0];
@@ -352,15 +355,18 @@ export class AppComponent implements OnInit {
     //var smallerChild = this.nodesUntilPayout(child1) > this.nodesUntilPayout(child2) ? child1 : child2;
     //while smallerchild is smaller
     pay.call(this, kidsToFeed[0].node, kidsToFeed[0].pay)
+    this.data.forEach((item) => item.virtualId = null)
     pay.call(this, kidsToFeed[1].node, kidsToFeed[1].pay)
+    this.data.forEach((item) => item.virtualId = null)
     //loop this twice
     function pay(node, ammount) {
+      this.data.sort((a,b)=> a.id - b.id)
       let nodeIndex = this.data.findIndex(
 
         // decide the node to pay out
         //instead of zero, the highest < 63 children sold node
         //sort data by highest children sold
-        (element) => element.id == node.id
+        (element) => element.id == node.parent.id
         //(element) => element.id == smallerChild.id
       )
       let indexedNodes = createIndexedNodes.call(this, nodeIndex).filter((node) => {
@@ -369,15 +375,16 @@ export class AppComponent implements OnInit {
       while (indexedNodes.length < this.ammount.value) {
 
         this.addDataRow()
-        indexedNodes = createIndexedNodes.call(this).filter((node) => {
+        indexedNodes = createIndexedNodes.call(this, nodeIndex).filter((node) => {
           return !node.hasOwnProperty("owner")
         })
+      
       }
-
+      var nodeChildren = this.findChildrenWidthFirst(node,false)
       // repeat everything above
       // filter out taken nodes, if less then ammount -> add another row -> repeat
       let index = 0
-      while (ammount > 0 && index < indexedNodes.length) {
+      while (ammount > 0 && index < nodeChildren.length) {
         let dataIndex = this.data.findIndex((element) => {
           return element.id == indexedNodes[index].id
         })
@@ -402,7 +409,7 @@ export class AppComponent implements OnInit {
     // if ammount still not zero, add a row and repeat the process
 
     this.update()
-    this.data.forEach((item) => item.virtualId = null)
+    
 
     /*
         this.data.sort((a, b) => {
@@ -554,10 +561,10 @@ export class AppComponent implements OnInit {
       console.log(d)
 
       this.selectedInfo = d.data.id;
-      d3.select(this)
-      d3.select(this)
-      .style("stroke", "steelblue")
-
+     
+/*       d3.select(this)
+      .style("stroke", "steelblue") */
+      this.update()
     })
 
     enterNodes.on("click", (d) => {
@@ -566,13 +573,13 @@ export class AppComponent implements OnInit {
       this.selected = d.data.id - 1;
       this.update()
     })
-    enterNodes.on("mouseleave", function(d) {
+/*     enterNodes.on("mouseleave", function(d) {
       console.log(d)
 
       this.selectedInfo = 0;
       d3.select(this)
       .stroke("steelblue")
-    })
+    }) */
 
 
 
