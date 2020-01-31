@@ -223,7 +223,11 @@ export class AppComponent implements OnInit {
           if (suggestedNode.children[0].childrenSold < suggestedNode.children[1].childrenSold) {
             suggestedNode = suggestedNode.children[0]
           }
-          else { suggestedNode = suggestedNode.children[1] }
+          else if (suggestedNode.children[0].childrenSold > suggestedNode.children[1].childrenSold) { suggestedNode = suggestedNode.children[1] }
+          else{
+            suggestedNode.children.sort((a,b)=>a.id -b.id)
+            suggestedNode = suggestedNode.children[0]
+          }
         }
       }
 
@@ -557,29 +561,29 @@ export class AppComponent implements OnInit {
       .attr('transform', d => `translate(${0}, ${-65})`)
       .attr('display', d => d.data.id == this.selectedInfo ? "block" : "none")
 
-    enterNodes.on("mouseover", (d) => {
+      enterNodes.on("click", (d) => {
+        console.log(d)
+  
+        this.selected = d.data.id - 1;
+        this.update()
+      })
+    enterNodes.on("mouseenter", (d) => {
       console.log(d)
 
       this.selectedInfo = d.data.id;
      
-/*       d3.select(this)
-      .style("stroke", "steelblue") */
+
       this.update()
     })
 
-    enterNodes.on("click", (d) => {
-      console.log(d)
 
-      this.selected = d.data.id - 1;
-      this.update()
-    })
-/*     enterNodes.on("mouseleave", function(d) {
+     enterNodes.on("mouseleave", function(d) {
       console.log(d)
 
       this.selectedInfo = 0;
       d3.select(this)
       .stroke("steelblue")
-    }) */
+    }) 
 
 
 
