@@ -5,6 +5,7 @@ import { analyzeAndValidateNgModules } from '@angular/compiler';
 import { element } from '@angular/core/src/render3';
 import { JsonPipe } from '@angular/common';
 import { ɵangular_packages_platform_browser_dynamic_platform_browser_dynamic_a } from '@angular/platform-browser-dynamic';
+import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 declare const d3;
 //declare const fisheye;
 declare var graph;
@@ -129,12 +130,12 @@ export class AppComponent implements OnInit {
     }
     return 64 - aValue
   }
-  findAllAncestors(index) {
+  findAllAncestors(node) {
     var ancestorsList = []
-    ancestorsList.push(this.data[index])
+    ancestorsList.push(node)
     var item;
     try {
-      item = this.data[index].parent
+      item = node.parent
     }
     catch{
       item = undefined
@@ -180,7 +181,7 @@ export class AppComponent implements OnInit {
     })
     return sortedData.reverse()
   }
-  findChildrenWidthFirst(node,leveled = true) {
+  findChildrenWidthFirst(node, leveled = true) {
     var results = [[node]]
     let index = 0
     while (true) {
@@ -196,10 +197,10 @@ export class AppComponent implements OnInit {
       }
 
       else {
-        if(leveled == false){
+        if (leveled == false) {
           var plainResults = []
-          results.forEach((list)=> {
-            list.forEach((node)=>plainResults.push(node))
+          results.forEach((list) => {
+            list.forEach((node) => plainResults.push(node))
           })
           return plainResults
         }
@@ -207,40 +208,77 @@ export class AppComponent implements OnInit {
       }
     }
   }
+  //argument user, ammount
   makeTransaction(event) {
     // completely obsolete!
 
     function assignFreeNode(userIndex) {
-      this.data.sort((a, b) => a.id - b.id)
-      var assignedNode = null;
-      var suggestedNode = this.data[0]
-      while (assignedNode == null) {
+      var fakeList = this.data.sort((a,b)=> b.childrenSold - a.childrenSold).filter((item)=>item.sold !=true)
+      var suggestedNode = fakeList[0]
+      var owner = suggestedNode.owner
+      if (owner == null) {
+        this.users[userIndex].nodes.push(suggestedNode)
+        //suggestedNode.owner = this.name.value
+      suggestedNode.owner = this.name.value
+      this.update()
 
-        if (suggestedNode.childrenSold == 0) {
-          assignedNode = suggestedNode
+      }
+      else {
+    /*     var startNode = this.users[suggestedNode.owner]
+        var startNodeIndex = this.data.findIndex((node) => node.id == startNode.id)
+        var indexedNodes = this.createIndexedNodes(startNodeIndex) */
+        if (suggestedNode.children[0].childrenSold < suggestedNode.children[1].childrenSold) {
+          suggestedNode = suggestedNode.children[0]
         }
+        else if (suggestedNode.children[0].childrenSold > suggestedNode.children[1].childrenSold) { suggestedNode = suggestedNode.children[1] }
         else {
-          if (suggestedNode.children[0].childrenSold < suggestedNode.children[1].childrenSold) {
-            suggestedNode = suggestedNode.children[0]
-          }
-          else if (suggestedNode.children[0].childrenSold > suggestedNode.children[1].childrenSold) { suggestedNode = suggestedNode.children[1] }
-          else{
-            suggestedNode.children.sort((a,b)=>a.id -b.id)
-            suggestedNode = suggestedNode.children[0]
-          }
+          suggestedNode.children.sort((a, b) => a.id - b.id)
+          suggestedNode = suggestedNode.children[0]
         }
+        pay.call(this, suggestedNode, 1)
+        this.update()
       }
 
-      this.users[userIndex].nodes.push(assignedNode)
-      assignedNode.owner = this.name.value
-      this.findAllAncestors(this.data.findIndex((item)=>item.id == assignedNode.id))
-      return assignedNode
+      //find node to payout
+      //findout owner of the node to payout
+      //create indexed list from the root node of the owner
+      //created indexed list from that node
+      //buy one node
 
+      //find owner of the node to payout
+      //change value of user
+      //cannot select owner
+      //cannot find out what was the last node purchased
+      /*      this.data.sort((a, b) => a.id - b.id)
+           var assignedNode = null;
+           var suggestedNode = this.data[0]
+           while (assignedNode == null) {
+     
+             if (suggestedNode.childrenSold == 0) {
+               assignedNode = suggestedNode
+             }
+             else {
+               if (suggestedNode.children[0].childrenSold < suggestedNode.children[1].childrenSold) {
+                 suggestedNode = suggestedNode.children[0]
+               }
+               else if (suggestedNode.children[0].childrenSold > suggestedNode.children[1].childrenSold) { suggestedNode = suggestedNode.children[1] }
+               else {
+                 suggestedNode.children.sort((a, b) => a.id - b.id)
+                 suggestedNode = suggestedNode.children[0]
+               }
+             }
+           }
+     
+           this.users[userIndex].nodes.push(assignedNode)
+           assignedNode.owner = this.name.value
+           this.findAllAncestors(assignedNode)
+           return assignedNode 
+           */
     }
 
     function createIndexedNodes(nodeIndex) {
-      this.data.sort((a,b)=>a.id-b.id)
-      ammount = this.ammount.value
+      this.data.sort((a, b) => a.id - b.id)
+
       //
       //nodeIndex = 11
       //pick a weaker child
@@ -250,7 +288,10 @@ export class AppComponent implements OnInit {
         freeChildren = this.findAllChildren(nodeIndex)
       }
       catch{
+        var t1 = performance.now();
         this.addDataRow()
+        var t2 = performance.now();
+        console.log("adding a row took", t2 - t1)
         freeChildren = this.findAllChildren(nodeIndex)
       }
 
@@ -260,10 +301,10 @@ export class AppComponent implements OnInit {
       // add filter out sold kids
       while (freeChildren.length < ammount) {
         console.log("not enough rows... adding some")
+        var t1 = performance.now();
         this.addDataRow()
-
+        var t2 = performance.now();
         freeChildren = this.findAllChildren(nodeIndex)
-
       }
       //shallow copy of the data
       let virtualData = [...this.data].sort((a, b) => a.id - b.id)
@@ -305,7 +346,7 @@ export class AppComponent implements OnInit {
 
     let outerThis = this
     this.data.sort((a, b) => a.id - b.id)
-    let ammount = this.ammount.value
+    var ammount = this.ammount.value
     // assigns virtual indexes, 
 
     //select element here and use as input
@@ -338,33 +379,47 @@ export class AppComponent implements OnInit {
     /////////////////////////expand table
     //this is the highest node owned by user
 
-  
-    var fakeList = this.findPaymentPriorityChild(this.users[this.userIndex].nodes).filter((node) => node.sold == false)
 
-    var child1 = fakeList[0].children[0];
-    var child2 = fakeList[0].children[1];
-    var child1Value = this.nodesUntilPayout(child1)
-    var child1Pay = 0 - child1Value;
-    var child2Value = this.nodesUntilPayout(child2)
-    var child2Pay = 0 - child2Value;
-    var kidsToFeed = [{ node: child1, value: child1Value, pay: 0 }, { node: child2, value: child2Value, pay: 0 }]
+    let definedAmount = this.ammount.value
+    var t0 = performance.now()
     while (ammount > 0) {
-      kidsToFeed.sort((a, b) => b.value - a.value)
+      var fakeList = this.findPaymentPriorityChild(this.users[this.userIndex].nodes).filter((node) => node.sold == false)
 
-      kidsToFeed[0].pay++
-      kidsToFeed[0].value--
-      ammount--
+      var payoutChild = fakeList[0]
+      var child1 = payoutChild.children[0];
+      var child2 = payoutChild.children[1];
+      var child1Value = this.nodesUntilPayout(child1)
+      var child2Value = this.nodesUntilPayout(child2)
+      var kidsToFeed = [{ node: child1, value: child1Value, pay: 0 }, { node: child2, value: child2Value, pay: 0 }]
+      let payoutNodeSold = payoutChild.childrenSold
+      while (ammount > 0 && this.nodesUntilPayout(payoutChild) > 0) {
+        //does nothing -> simplify
+        kidsToFeed.sort((a, b) => b.value - a.value)
+
+        kidsToFeed[0].pay++
+        kidsToFeed[0].value--
+        ammount--
+        payoutNodeSold++
+
+
+
+        pay.call(this, kidsToFeed[0].node, kidsToFeed[0].pay)
+
+        this.data.forEach((item) => item.virtualId = null)
+        kidsToFeed[0].pay = 0
+        //should be simplified
+      }
+
     }
+    var t1 = performance.now();
+
 
     //var smallerChild = this.nodesUntilPayout(child1) > this.nodesUntilPayout(child2) ? child1 : child2;
     //while smallerchild is smaller
-    pay.call(this, kidsToFeed[0].node, kidsToFeed[0].pay)
-    this.data.forEach((item) => item.virtualId = null)
-    pay.call(this, kidsToFeed[1].node, kidsToFeed[1].pay)
-    this.data.forEach((item) => item.virtualId = null)
+
     //loop this twice
-    function pay(node, ammount) {
-      this.data.sort((a,b)=> a.id - b.id)
+    function pay(node, specificAmount) {
+      this.data.sort((a, b) => a.id - b.id)
       let nodeIndex = this.data.findIndex(
 
         // decide the node to pay out
@@ -376,21 +431,23 @@ export class AppComponent implements OnInit {
       let indexedNodes = createIndexedNodes.call(this, nodeIndex).filter((node) => {
         return !node.hasOwnProperty("owner")
       })
-      while (indexedNodes.length < this.ammount.value) {
+      while (indexedNodes.length < specificAmount) {
 
         this.addDataRow()
+
+
         indexedNodes = createIndexedNodes.call(this, nodeIndex).filter((node) => {
           return !node.hasOwnProperty("owner")
         })
-      
+
       }
-      var nodeChildren = this.findChildrenWidthFirst(node,false)
+      var nodeChildren = this.findChildrenWidthFirst(node, false)
       // repeat everything above
       // filter out taken nodes, if less then ammount -> add another row -> repeat
       let index = 0
-      while (ammount > 0 && index < nodeChildren.length) {
+      while (specificAmount > 0 && index < nodeChildren.length) {
         let dataIndex = this.data.findIndex((element) => {
-          return element.id == indexedNodes[index].id
+          return element.id == nodeChildren[index].id
         })
 
         let dataNode = this.data[dataIndex]
@@ -400,9 +457,9 @@ export class AppComponent implements OnInit {
           //add +1 sold nodes to all above
           this.data[dataIndex].owner = this.name.value;
           this.users[this.userIndex].nodes.push(dataNode);
-          ammount -= 1;
+          specificAmount -= 1;
 
-          this.findAllAncestors(dataIndex)
+          this.findAllAncestors(dataNode)
 
         }
         index += 1;
@@ -411,9 +468,9 @@ export class AppComponent implements OnInit {
     }
 
     // if ammount still not zero, add a row and repeat the process
-
     this.update()
-    
+
+
 
     /*
         this.data.sort((a, b) => {
@@ -549,41 +606,41 @@ export class AppComponent implements OnInit {
     enterNodes.append('text')
       .text((d) => {
         return `children sold: ${d.data.childrenSold} `
-    
+
       })
       .attr('transform', d => `translate(${0}, ${-85})`)
       .attr('display', d => d.data.id == this.selectedInfo ? "block" : "none")
 
-      enterNodes.append('text')
+    enterNodes.append('text')
       .text((d) => {
         return `owner: ${d.data.owner}`
       })
       .attr('transform', d => `translate(${0}, ${-65})`)
       .attr('display', d => d.data.id == this.selectedInfo ? "block" : "none")
 
-      enterNodes.on("click", (d) => {
-        console.log(d)
-  
-        this.selected = d.data.id - 1;
-        this.update()
-      })
+    enterNodes.on("click", (d) => {
+      console.log(d)
+
+      this.selected = d.data.id - 1;
+      this.update()
+    })
     enterNodes.on("mouseenter", (d) => {
       console.log(d)
 
       this.selectedInfo = d.data.id;
-     
+
 
       this.update()
     })
 
 
-     enterNodes.on("mouseleave", function(d) {
+    enterNodes.on("mouseleave", function (d) {
       console.log(d)
 
       this.selectedInfo = 0;
       d3.select(this)
-      .stroke("steelblue")
-    }) 
+        .stroke("steelblue")
+    })
 
 
 
