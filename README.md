@@ -1,6 +1,6 @@
 # MilosWebsite
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 7.3.8.
+This is a front end only sandbox version of the site
 
 ## Development server
 
